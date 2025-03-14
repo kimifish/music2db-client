@@ -1,0 +1,19 @@
+[project]
+name = "music2db"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dotenv>=0.9.9",
+    "kimiconfig>=0.2.7",
+    "pydantic>=2.10.6",
+    "rich>=13.9.4",
+    "mutagen>=1.47.0",
+    "schedule>=1.2.0",
+    "requests>=2.31.0",
+]
+[tool.uv]
+index = [
+    { url = "http://kimihome.lan:58080/simple/" }
+]
