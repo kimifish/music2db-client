@@ -148,7 +148,7 @@ wheels = [
 ]
 
 [[package]]
-name = "music2db"
+name = "music2db-client"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

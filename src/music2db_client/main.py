@@ -200,6 +200,9 @@ def main():
     _init_config([args.config_file], unknown_args)
     _init_logs()
 
+    # Initialization of GracefulKiller for proper application termination
+    killer = GracefulKiller(kill_targets=[cfg.shutdown])
+
     log.info(f"Starting {APP_NAME}")
     
     # Schedule daily scan
@@ -216,6 +219,4 @@ def main():
     log.info(f"Shutting down {APP_NAME}")
 
 if __name__ == "__main__":
-    # Initialization of GracefulKiller for proper application termination
-    killer = GracefulKiller(kill_targets=[cfg.shutdown])
     main()

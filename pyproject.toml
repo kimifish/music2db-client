@@ -1,7 +1,7 @@
 [project]
-name = "music2db"
-version = "0.1.0"
-description = "Add your description here"
+name = "music2db-client"
+version = "0.2.0"
+description = "Music metadata collection client"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -13,6 +13,17 @@ dependencies = [
     "schedule>=1.2.0",
     "requests>=2.31.0",
 ]
+
+[project.scripts]
+music2db = "music2db_client.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["music2db_client*"]
+
+[tool.setuptools.package-data]
+music2db_client = ["systemd/*"]
+
 [tool.uv]
 index = [
     { url = "http://kimihome.lan:58080/simple/" }

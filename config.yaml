@@ -1,11 +1,11 @@
 music:
   path: /junk/kimiside@gmail.com/Music/Песенник
-  scan_time: "02:00"  # Run at 2 AM
+  scan_time: "04:00"  # Run at 2 AM
   extensions: [".mp3", ".flac", ".m4a", ".ogg"]
 
 music_db:
-  # url: http://kimihome.lan
-  url: http://kimipc.lan
+  url: http://kimihome.lan
+  # url: http://kimipc.lan
   port: 5005
   one_track_endpoint: "/add_track"
   many_tracks_endpoint: "/add_tracks"
