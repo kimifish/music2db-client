@@ -1,6 +1,6 @@
 [project]
 name = "music2db-client"
-version = "0.2.0"
+version = "0.3.0"  # Updated from 0.2.0
 description = "Music metadata collection client"
 readme = "README.md"
 requires-python = ">=3.10"

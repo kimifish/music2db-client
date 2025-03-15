@@ -20,6 +20,7 @@ from rich.pretty import pretty_repr
 from rich.traceback import install as install_rich_traceback 
 from kimiUtils.killer import GracefulKiller
 from utils import common_theme, log_theme
+from importlib.metadata import version, PackageNotFoundError
 
 APP_NAME = "music2db"
 HOME_DIR = os.path.expanduser("~")
@@ -124,7 +125,23 @@ def check_server_health() -> bool:
         log.error(f"Server health check failed: {str(e)}")
         return False
 
-def scan_music_directory() -> None:
+def _send_batch(tracks: list[dict]) -> None:
+    """Send batch of tracks to server."""
+    try:
+        url = f"{cfg.music_db.url}:{cfg.music_db.port}{cfg.music_db.many_tracks_endpoint}"
+        log.info(f"Sending batch of {len(tracks)} tracks to server")
+        response = requests.post(url, json=tracks)
+        
+        if response.status_code == 200:
+            result = response.json()
+            log.info(result["message"])
+        else:
+            log.error(f"Failed to send tracks batch: {response.status_code}")
+            
+    except Exception as e:
+        log.error(f"Error sending tracks batch to server: {str(e)}")
+
+def scan_music_directory(killer: GracefulKiller) -> None:
     """Scan music directory and send metadata to server."""
     if not check_server_health():
         log.error("Server is not healthy, skipping scan")
@@ -132,10 +149,17 @@ def scan_music_directory() -> None:
         
     music_path = Path(cfg.music.path)
     extensions = set(cfg.music.extensions)
+    tracks = []
+    batch_size = 100
     
     log.info(f"Starting music directory scan: {music_path}")
     
     for file_path in music_path.rglob("*"):
+        # Check if termination was requested
+        if killer.kill_now:
+            log.info("Termination requested, stopping scan")
+            return
+            
         try:
             if file_path.is_symlink():
                 continue
@@ -144,25 +168,24 @@ def scan_music_directory() -> None:
                 try:
                     metadata = extract_metadata(file_path)
                     if metadata:
-                        data = {
+                        tracks.append({
                             "file_path": str(file_path.relative_to(music_path)),
                             "metadata": metadata
-                        }
+                        })
                         
-                        # Send to server
-                        url = f"{cfg.music_db.url}:{cfg.music_db.port}{cfg.music_db.one_track_endpoint}"
-                        log.debug(f'Sending metadata for {file_path.name} to {url}: {pretty_repr(data)}')
-                        response = requests.post(url, json=data)
-                        
-                        if response.status_code == 200:
-                            log.debug(f"Successfully processed: {file_path.name}")
-                        else:
-                            log.error(f"Failed to send metadata for {file_path.name}: {response.status_code}")
+                        # Send batch when reaching batch_size
+                        if len(tracks) >= batch_size:
+                            _send_batch(tracks)
+                            tracks = []
                             
                 except Exception as e:
                     log.error(f"Error processing {file_path.name}: {str(e)}")
         except Exception as e:
             log.error(f"Error accessing {file_path}: {str(e)}")
+            
+    # Send remaining tracks
+    if tracks:
+        _send_batch(tracks)
 
 
 def _init_logs():
@@ -172,13 +195,29 @@ def _init_logs():
 
 
 def _parse_args():
-    parser = argparse.ArgumentParser(prog="ai_server", description="AI Server")
+    parser = argparse.ArgumentParser(prog="music2db", description="Music2DB Client")
     parser.add_argument(
         "-c",
         "--config",
         dest="config_file",
         default=DEFAULT_CONFIG_FILE,
         help="Configuration file location.",
+    )
+    parser.add_argument(
+        "-V",
+        "--version",
+        action="version",
+        version=f"{APP_NAME} {version('music2db-client')}",
+    )
+    parser.add_argument(
+        "--run-once",
+        dest="run_once",
+        help="Run the scan once and exit.",
+    )
+    parser.add_argument(
+        "--dont-scan-now",
+        dest="dont_scan_now",
+        help="Don't run the scan immediately.",
     )
     return parser.parse_known_args()
 
@@ -206,15 +245,21 @@ def main():
     log.info(f"Starting {APP_NAME}")
     
     # Schedule daily scan
-    schedule.every().day.at(cfg.music.scan_time).do(scan_music_directory)
+    schedule.every().day.at(cfg.music.scan_time).do(scan_music_directory, killer)
     
     # Run first scan immediately
-    scan_music_directory()
+    if not args.dont_scan_now:
+        scan_music_directory(killer)
+    
+    # Run scan once and exit
+    if args.run_once:
+        log.info("Run once flag set, exiting")
+        return
     
     # Keep running until killed
     while not killer.kill_now:
         schedule.run_pending()
-        time.sleep(10)
+        time.sleep(15)
 
     log.info(f"Shutting down {APP_NAME}")
 
