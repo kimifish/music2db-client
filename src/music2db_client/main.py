@@ -85,7 +85,7 @@ def extract_metadata(file_path: Path) -> Dict[str, Any]:
             # Extract tags from COMM as string
             for comm in tags.getall('COMM'):
                 if comm.desc == 'LastFM tags' and comm.text:
-                    metadata['tags'] = comm.text[0]
+                    metadata['tags'] = comm.text[0].replace('LastFM tags:', '').strip()
                     break
                 
         # Other formats (FLAC, M4A, etc.)
@@ -141,6 +141,51 @@ def _send_batch(tracks: list[dict]) -> None:
     except Exception as e:
         log.error(f"Error sending tracks batch to server: {str(e)}")
 
+def _get_last_scan_time() -> float:
+    """Get last successful scan timestamp from state file."""
+    state_file = Path(os.path.join(
+        os.getenv("XDG_STATE_HOME", os.path.join(HOME_DIR, ".local/state")),
+        APP_NAME,
+        "state.json"
+    ))
+    
+    if state_file.exists():
+        try:
+            with state_file.open('r') as f:
+                state = json.load(f)
+                return state.get('last_scan_time', 0)
+        except Exception as e:
+            log.error(f"Error reading state file: {str(e)}")
+    return 0
+
+def _save_last_scan_time(timestamp: float) -> None:
+    """Save successful scan timestamp to state file."""
+    state_file = Path(os.path.join(
+        os.getenv("XDG_STATE_HOME", os.path.join(HOME_DIR, ".local/state")),
+        APP_NAME,
+        "state.json"
+    ))
+    
+    try:
+        state_file.parent.mkdir(parents=True, exist_ok=True)
+        with state_file.open('w') as f:
+            json.dump({'last_scan_time': timestamp}, f)
+    except Exception as e:
+        log.error(f"Error saving state file: {str(e)}")
+
+def _get_latest_modification(directory: Path) -> float:
+    """Get the latest modification time in the directory tree."""
+    latest = directory.stat().st_mtime
+    
+    try:
+        for entry in directory.rglob("*"):
+            if entry.is_file() and not entry.is_symlink():
+                latest = max(latest, entry.stat().st_mtime)
+    except Exception as e:
+        log.error(f"Error checking modifications: {str(e)}")
+        
+    return latest
+
 def scan_music_directory(killer: GracefulKiller) -> None:
     """Scan music directory and send metadata to server."""
     if not check_server_health():
@@ -148,20 +193,45 @@ def scan_music_directory(killer: GracefulKiller) -> None:
         return
         
     music_path = Path(cfg.music.path)
+    if not music_path.exists():
+        log.error(f"Music directory does not exist: {music_path}")
+        return
+        
+    # Check if any files were modified since last scan
+    last_scan_time = _get_last_scan_time()
+    latest_modification = _get_latest_modification(music_path)
+    
+    if latest_modification <= last_scan_time:
+        log.info("No changes in music library since last scan, skipping")
+        return
+        
+    log.info(f"Changes detected, starting music directory scan: {music_path}")
+    
     extensions = set(cfg.music.extensions)
     tracks = []
     batch_size = 100
     
     log.info(f"Starting music directory scan: {music_path}")
     
+    # Keep track of ignored directories
+    ignored_dirs = set()
+    
+    # First pass - collect all directories with .ignore file
+    for path in music_path.rglob(".ignore"):
+        ignored_dirs.add(path.parent)
+        log.debug(f"Ignoring directory: {path.parent}")
+    
     for file_path in music_path.rglob("*"):
-        # Check if termination was requested
         if killer.kill_now:
             log.info("Termination requested, stopping scan")
             return
             
         try:
             if file_path.is_symlink():
+                continue
+                
+            # Skip if file is in an ignored directory
+            if any(parent in ignored_dirs for parent in file_path.parents):
                 continue
                 
             if file_path.suffix.lower() in extensions:
@@ -186,6 +256,9 @@ def scan_music_directory(killer: GracefulKiller) -> None:
     # Send remaining tracks
     if tracks:
         _send_batch(tracks)
+    
+    # Save successful scan time
+    _save_last_scan_time(time.time())
 
 
 def _init_logs():
