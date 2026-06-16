@@ -35,7 +35,7 @@ pip install .
 
 ## Configuration
 
-Create a configuration file at `~/.config/music2db/config.yaml`:
+Create a configuration file at `$XDG_CONFIG_HOME/music2db-client/config.yaml` or `~/.config/music2db-client/config.yaml`:
 
 ```yaml
 music:
@@ -46,18 +46,25 @@ music:
 music_db:
   url: http://localhost
   port: 5005
-  one_track_endpoint: "/add_track"
-  many_tracks_endpoint: "/add_tracks"
+  one_track_endpoint: "/add_track/"
+  many_tracks_endpoint: "/add_tracks/"
+  timeout_seconds: 30
+  retry_count: 3
+  retry_backoff_seconds: 2
 
-logging:
-  level: "INFO"  # or "DEBUG" for more detailed output
-  format: "%(message)s"
-  date_format: "%X"
-  markup: true
-  rich_tracebacks: true
-  show_time: true
-  show_path: false
+scan:
+  batch_size: 100
 ```
+
+Configuration lookup order is:
+
+1. Explicit `-c/--config` path
+2. `$XDG_CONFIG_HOME/music2db-client/config.yaml` or `~/.config/music2db-client/config.yaml`
+3. `/etc/music2db-client/config.yaml`
+4. `./config.yaml`
+5. `./config/config.yaml`
+
+Logging uses `cyberlog`. Optional logging configuration is loaded from `logging.yaml` next to the active `config.yaml`, then from the same config directories. See `config/logging.yaml` for an example.
 
 ## Running as a Service
 
@@ -68,8 +75,8 @@ logging:
 ~/.local/lib/python3.*/site-packages/music2db_client/systemd/install.sh
 
 # Enable and start service
-systemctl --user enable music2db
-systemctl --user start music2db
+systemctl --user enable music2db-client
+systemctl --user start music2db-client
 ```
 
 
@@ -81,8 +88,17 @@ You can also run the client manually:
 # Start the client
 music2db
 
+# Run one scan and exit
+music2db --run-once
+
+# Force a full rescan, ignoring saved scan timestamp
+music2db --run-once --force-rescan
+
 # Show metadata for a specific file
 music2db-show-metadata /path/to/music/file.mp3
+
+# Search indexed tracks
+music2db-search "upbeat rock" --limit 20
 ```
 
 ## Development

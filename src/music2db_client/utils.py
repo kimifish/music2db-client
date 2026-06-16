@@ -1,7 +1,6 @@
 # pyright: basic
 # pyright: reportAttributeAccessIssue=false
 
-import logging
 import re
 from rich.pretty import pretty_repr
 from rich.theme import Theme
@@ -9,10 +8,9 @@ from rich.traceback import install as install_rich_traceback
 from rich.tree import Tree
 # from deepdiff import DeepDiff
 # from state import State
-from kimiconfig import Config
+from .logging_setup import get_logger
 
-cfg = Config()
-log = logging.getLogger('ai_server.utils')
+log = get_logger(__name__)
 install_rich_traceback(show_locals=True)
 
 # def _log_state(state: State, tabs: int = 0):

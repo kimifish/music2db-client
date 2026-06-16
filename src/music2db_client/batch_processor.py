@@ -1,11 +1,11 @@
 from pathlib import Path
 from typing import Dict, Any, List
-import logging
 import requests
 from rich.progress import track
-from .main import extract_metadata, cfg
+from .logging_setup import get_logger
+from .main import extract_metadata, settings
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 def process_directory(directory: Path, batch_size: int = 100) -> None:
     """
@@ -19,7 +19,7 @@ def process_directory(directory: Path, batch_size: int = 100) -> None:
         log.error(f"Directory {directory} does not exist")
         return
         
-    extensions = set(cfg.music.extensions)
+    extensions = set(settings.music.extensions)
     tracks = []
     
     log.info(f"Starting batch processing of directory: {directory}")
@@ -59,7 +59,7 @@ def process_directory(directory: Path, batch_size: int = 100) -> None:
 def _send_batch(tracks: List[Dict[str, Any]]) -> None:
     """Send batch of tracks to server."""
     try:
-        url = f"{cfg.music_db.url}:{cfg.music_db.port}{cfg.music_db.many_tracks_endpoint}"
+        url = f"{settings.music_db.base_url}{settings.music_db.many_tracks_endpoint}"
         response = requests.post(url, json=tracks)
         
         if response.status_code == 200:

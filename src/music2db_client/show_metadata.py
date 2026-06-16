@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 from rich.console import Console
 from rich.pretty import Pretty
-from main import extract_metadata
+from .main import extract_metadata
 
 def main():
     parser = argparse.ArgumentParser(description="Show metadata that would be sent to server for a music file")

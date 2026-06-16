@@ -7,10 +7,10 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 mkdir -p "${HOME}/.config/systemd/user/"
 
 # Copy service file to user's systemd directory
-cp "${SCRIPT_DIR}/music2db.service" "${HOME}/.config/systemd/user/"
+cp "${SCRIPT_DIR}/music2db-client.service" "${HOME}/.config/systemd/user/"
 
 # Make sure the service file has correct permissions
-chmod 644 "${HOME}/.config/systemd/user/music2db.service"
+chmod 644 "${HOME}/.config/systemd/user/music2db-client.service"
 
 # Reload systemd daemon
 systemctl --user daemon-reload
@@ -18,11 +18,11 @@ systemctl --user daemon-reload
 echo "Music2DB service has been installed successfully!"
 echo
 echo "To enable and start the service, run:"
-echo "systemctl --user enable music2db"
-echo "systemctl --user start music2db"
+echo "systemctl --user enable music2db-client"
+echo "systemctl --user start music2db-client"
 echo
 echo "To check the service status:"
-echo "systemctl --user status music2db"
+echo "systemctl --user status music2db-client"
 echo
 echo "To view logs:"
-echo "journalctl --user -u music2db"
+echo "journalctl --user -u music2db-client"

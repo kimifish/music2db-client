@@ -1,21 +1,29 @@
 [project]
 name = "music2db-client"
-version = "0.3.1"
+version = "0.3.2"
 description = "Music metadata collection client"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "cyberlog>=0.2.1",
     "dotenv>=0.9.9",
-    "kimiconfig>=0.2.7",
     "pydantic>=2.10.6",
+    "pyyaml>=6.0",
     "rich>=13.9.4",
     "mutagen>=1.47.0",
     "schedule>=1.2.0",
     "requests>=2.31.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.5",
+]
+
 [project.scripts]
 music2db = "music2db_client.cli:main"
+music2db-search = "music2db_client.search_by_tags:main"
+music2db-show-metadata = "music2db_client.show_metadata:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -25,6 +33,12 @@ include = ["music2db_client*"]
 music2db_client = ["systemd/*"]
 
 [tool.uv]
-index = [
-    { url = "http://kimihome.lan:58080/simple/" }
-]
+allow-insecure-host = ["kimihome.lan:58080"]
+
+[tool.uv.sources]
+cyberlog = { index = "kimihome" }
+
+[[tool.uv.index]]
+name = "kimihome"
+url = "http://kimihome.lan:58080/simple"
+explicit = true
