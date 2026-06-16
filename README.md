@@ -48,12 +48,19 @@ music_db:
   port: 5005
   one_track_endpoint: "/add_track/"
   many_tracks_endpoint: "/add_tracks/"
+  delete_track_endpoint: "/delete_track/"
+  list_tracks_endpoint: "/list_tracks/"
   timeout_seconds: 30
   retry_count: 3
   retry_backoff_seconds: 2
 
 scan:
   batch_size: 100
+
+sync:
+  audit_interval_hours: 24
+  delete_missing: true
+  dry_run: false
 ```
 
 Configuration lookup order is:
@@ -94,12 +101,23 @@ music2db --run-once
 # Force a full rescan, ignoring saved scan timestamp
 music2db --run-once --force-rescan
 
+# Show planned add/update/delete operations without changing server or state
+music2db --run-once --dry-run
+
+# Force comparison with server /list_tracks/
+music2db --run-once --audit-server
+
+# Temporarily keep stale server records
+music2db --run-once --no-delete
+
 # Show metadata for a specific file
 music2db-show-metadata /path/to/music/file.mp3
 
 # Search indexed tracks
 music2db-search "upbeat rock" --limit 20
 ```
+
+The client keeps a manifest in `$XDG_STATE_HOME/music2db-client/state.json` or `~/.local/state/music2db-client/state.json`. On each run it compares the real music directory with that manifest, sends only new or metadata-changed tracks to `/add_tracks/`, and deletes stale server records through `/delete_track/`. A periodic server audit compares local state with `/list_tracks/` to recover from server resets or lost client state.
 
 ## Development
 

@@ -12,6 +12,13 @@ music_db:
   port: 5005
   one_track_endpoint: "/add_track/"
   many_tracks_endpoint: "/add_tracks/"
+  delete_track_endpoint: "/delete_track/"
+  list_tracks_endpoint: "/list_tracks/"
+
+sync:
+  audit_interval_hours: 24
+  delete_missing: true
+  dry_run: false
 
 
 # Настройки логирования

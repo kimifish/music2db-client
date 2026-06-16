@@ -28,6 +28,8 @@ class MusicDbSettings(BaseModel):
     port: int = 5005
     one_track_endpoint: str = "/add_track/"
     many_tracks_endpoint: str = "/add_tracks/"
+    delete_track_endpoint: str = "/delete_track/"
+    list_tracks_endpoint: str = "/list_tracks/"
     timeout_seconds: float = 30
     retry_count: int = 3
     retry_backoff_seconds: float = 2
@@ -43,6 +45,14 @@ class ScanSettings(BaseModel):
     batch_size: int = 100
 
 
+class SyncSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    audit_interval_hours: float = 24
+    delete_missing: bool = True
+    dry_run: bool = False
+
+
 class Settings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -50,4 +60,5 @@ class Settings(BaseModel):
     music: MusicSettings
     music_db: MusicDbSettings = Field(default_factory=MusicDbSettings)
     scan: ScanSettings = Field(default_factory=ScanSettings)
+    sync: SyncSettings = Field(default_factory=SyncSettings)
     logging: dict[str, Any] = Field(default_factory=dict)
