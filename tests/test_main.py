@@ -154,3 +154,34 @@ def test_audit_respects_runtime_no_delete(monkeypatch, tmp_path):
 
     assert main._audit_server(plan, tmp_path, delete_missing=False) is True
     assert deleted == []
+
+
+def test_scan_saves_manifest_for_successful_files_when_metadata_errors(monkeypatch, tmp_path):
+    good = tmp_path / "good.mp3"
+    broken = tmp_path / "broken.mp3"
+    good.write_bytes(b"good")
+    broken.write_bytes(b"broken")
+    state_home = tmp_path / "state"
+    sent = []
+
+    main.settings = Settings(
+        music=MusicSettings(path=tmp_path),
+        music_db=MusicDbSettings(url="http://server", port=5005),
+    )
+    monkeypatch.setenv("XDG_STATE_HOME", str(state_home))
+    monkeypatch.setattr(main, "check_server_health", lambda: True)
+    monkeypatch.setattr(main, "_server_audit_due", lambda manifest: False)
+    monkeypatch.setattr(main, "_send_tracks_in_batches", lambda tracks: sent.extend(tracks) or True)
+
+    def metadata(file_path):
+        if file_path.name == "broken.mp3":
+            raise RuntimeError("broken metadata")
+        return {"title": "good"}
+
+    monkeypatch.setattr(main, "extract_metadata", metadata)
+
+    assert main.scan_music_directory(SimpleNamespace(kill_now=False)) is True
+
+    loaded = main._load_manifest(tmp_path)
+    assert [track["file_path"] for track in sent] == ["good.mp3"]
+    assert set(loaded.files) == {"good.mp3"}

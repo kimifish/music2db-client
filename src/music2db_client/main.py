@@ -198,7 +198,7 @@ def scan_music_directory(
 
     if dry_run:
         _log_dry_run_plan(plan)
-        return plan.metadata_errors == 0
+        return True
 
     success = True
     if plan.tracks_to_send and not _send_tracks_in_batches(plan.tracks_to_send):
@@ -210,7 +210,12 @@ def scan_music_directory(
     if audit_due and success:
         success = _audit_server(plan, music_path, delete_missing=delete_missing)
 
-    if success and plan.metadata_errors == 0 and not killer.kill_now:
+    if success and not killer.kill_now:
+        if plan.metadata_errors:
+            log.warning(
+                "`metadata` Saving manifest with %s metadata errors; failed files will be retried on future runs",
+                plan.metadata_errors,
+            )
         plan.manifest.last_scan = time.time()
         if audit_due:
             plan.manifest.last_server_audit = plan.manifest.last_scan
@@ -619,7 +624,7 @@ def _package_version() -> str:
     try:
         return version("music2db-client")
     except PackageNotFoundError:
-        return "0.3.3"
+        return "0.3.4"
 
 
 def main() -> int:
